@@ -11,35 +11,69 @@ app.use(bodyParser.json());
 const db = new sqlite3.Database(':memory:');
 
 db.serialize(() => {
-  db.run("CREATE TABLE cats (id INT, name TEXT, votes INT)");
-  db.run("CREATE TABLE dogs (id INT, name TEXT, votes INT)");
+  db.run("CREATE TABLE cats (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL , votes INT)");
+  db.run("CREATE TABLE dogs (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL , votes INT)");
 });
 
 app.post('/cats', (req, res) => {
-  const name = req.body.name;
-  db.run(`INSERT INTO cats (name, votes) VALUES ('${name}', 0)`, function(err) {
-    if (err) {
-      res.status(500).send("Erro ao inserir no banco de dados");
-    } else {
-      res.status(201).json({ id: this.lastID, name, votes: 0 });
-    }
-  });
+  const name = req.params.name;
+    db.run(`INSERT INTO cats (name, votes) VALUES ('${name}', 0)`, function(err) {
+      if(( name.length === 0)){
+        res.status(500).send("Erro nome nao fornecido")
+      }
+      if (err) {
+        res.status(500).send("Erro ao cadastrar cachorro");
+      } else {
+        res.status(201).json({ id: this.lastID, name, votes: 0 });
+      }
+    });
+
+
 });
 
 app.post('/dogs', (req, res) => {
-  
+  const name = req.params.name;
+    db.run(`INSERT INTO dogs (name, votes) VALUES ('${name}', 0)`, function(err) {
+      if(( name.length === 0)){
+        res.status(500).send("Erro nome nao fornecido")
+      }
+      if (err) {
+        res.status(500).send("Erro em cadastrar cachorro");
+      } else {
+        res.status(201).json({ id: this.lastID, name, votes: 0 });
+      }
+    });
+
+
 });
 
 app.post('/vote/:animalType/:id', (req, res) => {
- 
-  db.run(`UPDATE ${animalType} SET votes = votes + 1 WHERE id = ${id}`);
-  res.status(200).send("Voto computado");
-});
+  const animalType = req.params.animalType;
+  const id = req.params.id;
+  const verifica = (`SELECT id FROM ${animalType} WHERE id = ${id}`)
+  db.get(verifica, (row) =>{
+  if(!row){
+      res.status(404).send("Nào cadastrado")
+    }
+    else{
+      db.run(`UPDATE ${animalType} SET votes = votes + 1 WHERE id = ${id}`, function(erro){
+        if(erro){
+        res.status(500).send("Erro ao computar voto");
+        }
+        else{
+        res.status(200).send("Voto computado");
+        }
+      });
+    }
+  
+  }
+
+)});
 
 app.get('/cats', (req, res) => {
   db.all("SELECT * FROM cats", [], (err, rows) => {
     if (err) {
-      res.status(500).send("Erro ao consultar o banco de dados");
+      res.status(500).send("Erro ao consultar tabela de cachorros");
     } else {
       res.json(rows);
     }
@@ -47,7 +81,13 @@ app.get('/cats', (req, res) => {
 });
 
 app.get('/dogs', (req, res) => {
-  
+  db.all("SELECT * FROM dogs", [], (err, rows) => {
+    if (err) {
+      res.status(500).send("Erro ao consultar tabela de cachorros");
+    } else {
+      res.json(rows);
+    }
+  });
 });
 
 app.use((err, req, res, next) => {
